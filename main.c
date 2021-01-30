@@ -26,8 +26,9 @@
 #include "cc1110-ext.h"
 
 void delay(void) {
-    volatile int x = 5;
-    while (x--);
+    NOP();
+    NOP();
+    NOP();
 }
 
 void delay_arb(int t) {
@@ -44,7 +45,7 @@ void delay_long(void) {
 void toggle_p15_clear_p22(int x) {
     for (int i = 0; i < x; i++) {
         P1_5 = 1;
-        NOP();
+        delay();
         P1_5 = 0;
         P2_2 = 0;
     }
@@ -81,29 +82,29 @@ void clear_screen(void) {
 
     for (int i = 0; i < 5; i++) {
         P1_0 = 1;
-        NOP();
+        delay();
         P1_0 = 0;
-        NOP();
+        delay();
     }
     for (int j = 0; j < 360/8; j++) {
         P0 = 0xff;
         P1_0 = 1;
-        NOP();
+        delay();
         P1_0 = 0;
     }
     P1_7 = 1;
-    NOP();
+    delay();
     P1_7 = 0;
-    NOP();
+    delay();
     
     P1_6 = 1;
     P2_2 = 1;
     for (int i = 0; i < 480; i++) {
         delay_arb(3000);
         P1_5 = 1;
-        NOP();
+        delay();
         P1_5 = 0;
-        NOP();
+        delay();
         P2_2 = 0;
     }
 
@@ -154,7 +155,7 @@ void main(void)
     // Enable LCD power
     P1_2 = 1; // Enable LCD logic power
     P1_1 = 1; // Enable DCDC power supply
-    
+
     clear_screen();
 
     pwm_set_vh(0x80);
@@ -166,16 +167,16 @@ void main(void)
         P2_2 = 0;
         P1_7 = 0;
         P1_5 = 0;
-        NOP();
+        delay();
         P2_1 = 1;
 
         // Something could happen here
 
         for (int i = 0; i < 5; i++) {
             P1_0 = 1;
-            NOP();
+            delay();
             P1_0 = 0;
-            NOP();
+            delay();
         }
         for (int j = 0; j < 360/8; j++) {
             if ((!(j & 0x4)) ^ (!(i & 0x20)))
@@ -184,13 +185,13 @@ void main(void)
                 P0 = 0x00;
             
             P1_0 = 1;
-            NOP();
+            delay();
             P1_0 = 0;
         }
 
         P2_2 = 1;
         P1_7 = 1;
-        NOP();
+        delay();
 
         toggle_p15_clear_p22(i);
 
