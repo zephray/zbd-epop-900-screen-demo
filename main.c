@@ -25,6 +25,20 @@
 #include <cc1110.h>
 #include "cc1110-ext.h"
 
+// SEG-only connection:
+#define LCD_SEG_LP  P1_7
+#define LCD_CP      P1_0
+// COM-only connection:
+#define LCD_COM_LP  P1_5
+#define LCD_FLM     P2_2
+// Common connection:
+#define LCD_DISPON  P2_1
+#define LCD_M       P1_6
+
+// Power Control
+#define LCD_LOGIC_PWR  P1_2
+#define LCD_DCDC_PWR   P1_1
+
 void delay(void) {
     NOP();
     NOP();
@@ -44,10 +58,10 @@ void delay_long(void) {
 
 void toggle_p15_clear_p22(int x) {
     for (int i = 0; i < x; i++) {
-        P1_5 = 1;
+        LCD_COM_LP = 1;
         delay();
-        P1_5 = 0;
-        P2_2 = 0;
+        LCD_COM_LP = 0;
+        LCD_FLM = 0;
     }
 }
 
@@ -78,37 +92,37 @@ void clear_screen(void) {
     // Wait for voltage to stable
     delay_arb(1000);
 
-    P2_1 = 1;
+    LCD_DISPON = 1;
 
     for (int i = 0; i < 5; i++) {
-        P1_0 = 1;
+        LCD_CP = 1;
         delay();
-        P1_0 = 0;
+        LCD_CP = 0;
         delay();
     }
     for (int j = 0; j < 360/8; j++) {
         P0 = 0xff;
-        P1_0 = 1;
+        LCD_CP = 1;
         delay();
-        P1_0 = 0;
+        LCD_CP = 0;
     }
-    P1_7 = 1;
+    LCD_SEG_LP = 1;
     delay();
-    P1_7 = 0;
+    LCD_SEG_LP = 0;
     delay();
     
-    P1_6 = 1;
-    P2_2 = 1;
+    LCD_M = 1;
+    LCD_FLM = 1;
     for (int i = 0; i < 480; i++) {
         delay_arb(3000);
-        P1_5 = 1;
+        LCD_COM_LP = 1;
         delay();
-        P1_5 = 0;
+        LCD_COM_LP = 0;
         delay();
-        P2_2 = 0;
+        LCD_FLM = 0;
     }
 
-    P2_1 = 0;
+    LCD_DISPON = 0;
     P1_4 = 1;
     delay_long();
 }
@@ -123,14 +137,7 @@ void main(void)
 
     CLKCON = CLKCON_OSC32 | TICKSPD_DIV_1 | CLKSPD_DIV_1;
 
-    // SEG-only connection:
-    //   P1_7 - Latch data
-    //   P1_0 - PCLK
-    //   P2_2 - ?
-    // Common connection:
-    //   P2_1 - DISPON?
-    //   P1_5 - Next line
-    //   P1_6 - Mode?
+
 
     P0 = 0x00;
     P1 = 0x00;
@@ -141,20 +148,19 @@ void main(void)
     P2DIR = 0x04 | 0x02;
 
     P0 = 0x00;
-    P1_2 = 0;
-    P1_0 = 0;
-    P1_4 = 0;
-    P1_5 = 0;
-    P1_6 = 0;
-    P1_7 = 0;
-    P2_1 = 0;
-    P2_2 = 0;
+    LCD_LOGIC_PWR = 0;
+    LCD_CP = 0;
+    LCD_COM_LP = 0;
+    LCD_M = 0;
+    LCD_SEG_LP = 0;
+    LCD_DISPON = 0;
+    LCD_FLM = 0;
 
     pwm_init();
 
     // Enable LCD power
-    P1_2 = 1; // Enable LCD logic power
-    P1_1 = 1; // Enable DCDC power supply
+    LCD_LOGIC_PWR = 1; // Enable LCD logic power
+    LCD_DCDC_PWR = 1; // Enable DCDC power supply
 
     clear_screen();
 
@@ -163,19 +169,19 @@ void main(void)
     delay_arb(1000);
 
     for (int i = 0; i < 480; i++) {
-        P1_6 = 0;
-        P2_2 = 0;
-        P1_7 = 0;
-        P1_5 = 0;
+        LCD_M = 0;
+        LCD_FLM = 0;
+        LCD_SEG_LP = 0;
+        LCD_COM_LP = 0;
         delay();
-        P2_1 = 1;
+        LCD_DISPON = 1;
 
         // Something could happen here
 
         for (int i = 0; i < 5; i++) {
-            P1_0 = 1;
+            LCD_CP = 1;
             delay();
-            P1_0 = 0;
+            LCD_CP = 0;
             delay();
         }
         for (int j = 0; j < 360/8; j++) {
@@ -184,31 +190,29 @@ void main(void)
             else
                 P0 = 0x00;
             
-            P1_0 = 1;
+            LCD_CP = 1;
             delay();
-            P1_0 = 0;
+            LCD_CP = 0;
         }
 
-        P2_2 = 1;
-        P1_7 = 1;
+        LCD_FLM = 1;
+        LCD_SEG_LP = 1;
         delay();
 
         toggle_p15_clear_p22(i);
 
-        P1_7 = 0;
+        LCD_SEG_LP = 0;
         delay_arb(3000);
-        P2_2 = 1;
+        LCD_FLM = 1;
 
-        P1_5 = 1;
-        P2_1 = 0;
+        LCD_COM_LP = 1;
+        LCD_DISPON = 0;
     }
-    
 
     // Turn off everything
     delay_arb(1000);
-    P1_1 = 0; // Enable DCDC power supply
-    P1_2 = 0; // Enable LCD logic power
-   
+    LCD_DCDC_PWR = 0; // Enable DCDC power supply
+    LCD_LOGIC_PWR = 0; // Enable LCD logic power
 
     while(1);
 }
