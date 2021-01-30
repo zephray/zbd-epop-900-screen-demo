@@ -34,6 +34,8 @@
 // Common connection:
 #define LCD_DISPON  P2_1
 #define LCD_M       P1_6
+// Data bus
+#define LCD_DB      P0
 
 // Power Control
 #define LCD_LOGIC_PWR  P1_2
@@ -53,15 +55,6 @@ void delay_arb(int t) {
 void delay_long(void) {
     for (int x = 0; x < 1000; x++) {
         delay_arb(1000);
-    }
-}
-
-void toggle_p15_clear_p22(int x) {
-    for (int i = 0; i < x; i++) {
-        LCD_COM_LP = 1;
-        delay();
-        LCD_COM_LP = 0;
-        LCD_FLM = 0;
     }
 }
 
@@ -101,7 +94,7 @@ void clear_screen(void) {
         delay();
     }
     for (int j = 0; j < 360/8; j++) {
-        P0 = 0xff;
+        LCD_DB = 0xff;
         LCD_CP = 1;
         delay();
         LCD_CP = 0;
@@ -113,7 +106,7 @@ void clear_screen(void) {
     
     LCD_M = 1;
     LCD_FLM = 1;
-    for (int i = 0; i < 480; i++) {
+    for (int i = 0; i < 484; i++) {
         delay_arb(3000);
         LCD_COM_LP = 1;
         delay();
@@ -147,7 +140,7 @@ void main(void)
     P1DIR = 0xff;
     P2DIR = 0x04 | 0x02;
 
-    P0 = 0x00;
+    LCD_DB = 0x00;
     LCD_LOGIC_PWR = 0;
     LCD_CP = 0;
     LCD_COM_LP = 0;
@@ -168,16 +161,13 @@ void main(void)
     pwm_set_vbias(0x70);
     delay_arb(1000);
 
+    LCD_FLM = 1;
+    LCD_M = 0;
+    LCD_COM_LP = 0;
+    delay();
+    LCD_DISPON = 1;
+
     for (int i = 0; i < 480; i++) {
-        LCD_M = 0;
-        LCD_FLM = 0;
-        LCD_SEG_LP = 0;
-        LCD_COM_LP = 0;
-        delay();
-        LCD_DISPON = 1;
-
-        // Something could happen here
-
         for (int i = 0; i < 5; i++) {
             LCD_CP = 1;
             delay();
@@ -186,28 +176,32 @@ void main(void)
         }
         for (int j = 0; j < 360/8; j++) {
             if ((!(j & 0x4)) ^ (!(i & 0x20)))
-                P0 = 0xff;
+                LCD_DB = 0xff;
             else
-                P0 = 0x00;
+                LCD_DB = 0x00;
             
             LCD_CP = 1;
             delay();
             LCD_CP = 0;
         }
 
-        LCD_FLM = 1;
-        LCD_SEG_LP = 1;
-        delay();
+        if (i == 0) {
+            LCD_SEG_LP = 1;
+            delay();
+            LCD_SEG_LP = 0;
+        }
+        else {
+            LCD_COM_LP = 1;
+            LCD_SEG_LP = 1;
+            delay();
+            LCD_COM_LP = 0;
+            LCD_SEG_LP = 0;
+            LCD_FLM = 0;
+        }
 
-        toggle_p15_clear_p22(i);
-
-        LCD_SEG_LP = 0;
-        delay_arb(3000);
-        LCD_FLM = 1;
-
-        LCD_COM_LP = 1;
-        LCD_DISPON = 0;
+        delay_arb(1500);
     }
+    LCD_DISPON = 0;
 
     // Turn off everything
     delay_arb(1000);
